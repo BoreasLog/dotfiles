@@ -1,0 +1,264 @@
+; -*-Lisp-*-
+
+(let ((quicklisp-init (merge-pathnames "quicklisp/setup.lisp"
+				       (user-homedir-pathname))))
+  (when (probe-file quicklisp-init)
+    (load quicklisp-init)))
+
+(in-package :stumpwm)
+
+(ql:quickload "stumpwm")
+
+(setf *startup-message* nil) 
+(setf *startup-message* "happy hacking")
+
+
+(load-module "globalwindows")
+(load-module "swm-gaps")
+
+
+(defcommand delete-window-and-frame () ()
+            "Delete the current frame with its window."
+            (delete-window)
+            (remove-split))
+
+(defcommand firefox()()
+        (run-or-raise "firefox" '(:class "Firefox") t nil))
+
+(defcommand hsplit-and-focus () ()
+            "Create a new frame on the right and focus it."
+            (hsplit)
+            (move-focus :right))
+
+(defcommand vsplit-and-focus () ()
+            "Create a new frame below and move focus to it."
+            (vsplit)
+            (move-focus :down))
+
+ (setf
+       *message-window-gravity* :center
+       *input-window-gravity* :center
+       *window-border-style* :thin
+       *mouse-focus-policy* :click
+       *float-window-modifier* :SUPER)
+
+;(set-normal-gravity :center)
+;(set-maxsize-gravity :center)
+;(set-transient-gravity :center)
+
+(set-fg-color "#eeeeee")
+(set-bg-color "#1C2028")
+(set-border-color "#232731")
+(set-focus-color "#8541b0")
+(set-unfocus-color "#232731")
+(set-win-bg-color "#22272F")
+(set-float-focus-color "#3B4252")
+(set-float-unfocus-color "#232731")
+
+(setf *colors* (list "#1C2028"      ; 0 black
+                     "#BF616A"      ; 1 red
+                     "#A3BE8C"      ; 2 green
+                     "#EBCB8B"      ; 3 yellow
+                     "#5E81AC"      ; 4 blue
+                     "#B48EAD"      ; 5 magenta
+                     "#8FBCBB"      ; 6 cyan
+                     "#ECEFF4"))    ; 7 white
+
+(when *initializing*
+  (grename "1")
+  (gnewbg "2")
+  (gnewbg "3")
+  (gnewbg "4"))
+
+
+;(run-commands "mode-line" "mode-line")
+;; gap settings set the gaps
+
+(setf
+    swm-gaps:*head-gaps-size* 10 
+    swm-gaps:*inner-gaps-size* 10
+    swm-gaps:*outer-gaps-size* 10)
+
+;; load bar
+(run-shell-command "polybar laptop --reload")
+(run-shell-command "polybar screen --reload")
+
+
+;;load gaps
+(when *initializing*
+    (swm-gaps:toggle-gaps))
+
+;; (set-frame-outline-width 4)
+;; (setf *maxsize-border-width* 4)
+;; (setf *transient-border-width* 2)
+
+;;(setf *normal-border-width* 4)
+
+(ql:quickload :clx-truetype)
+(load-module "ttf-fonts")
+
+(xft:cache-fonts)
+;; font settings
+
+;; (set-font (make-instance 'xft:font :family "DejaVu Sans Mono" :subfamily
+;;"Bold" :size 12))
+
+(set-font `(
+            ,(make-instance 'xft:font :family "DejaVu Sans Mono" :subfamily "Bold" :size 12 :antialias t)
+            ,(make-instance 'xft:font :family "FreeMono" :subfamily "Bold" :size 12 :antialias t)))
+
+
+
+;; (defmethod raise-window :after (win)
+;;   (let ((ignore-names '("polybar-laptop_DP-1" "polybar-screen_HDMI-1")))
+;;     (flet ((window-above-p (win) (find-wm-state win :_NET_WM_STATE_ABOVE)))
+;;       (unless (window-above-p (window-xwin win))
+;;         (mapc
+;;          (lambda (w) (setf (xlib:window-priority w) :above))
+;;          (remove-if-not (lambda (w)
+;;                           (and (window-above-p w)
+;;                                (not (member (xlib:wm-name w) ignore-names :test #'string-equal))))
+;;                         (xlib:query-tree (screen-root (current-screen)))))))))
+
+
+(run-shell-command "feh --bg-fill ~/Pictures/wallhaven-eo2moo.jpg --bg-fill ~/Pictures/planes.jpg")
+    
+(undefine-key *root-map* (kbd "e"))
+
+(define-key *root-map* (kbd "d") "exec dmenu_run")
+
+(define-key *root-map* (kbd "e") "exec st -e emacsclient -c")
+
+(define-key *top-map* (kbd "s-S-RET") "exec st")
+
+
+;; aplication
+(defvar *my-applications-keymap*
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "b") "firefox")
+    (define-key m (kbd "e") "exec st -e emacsclient -c")
+   m))
+
+(define-key *root-map* (kbd "a") '*my-applications-keymap*) 
+
+;; keymanagment
+
+(defvar *my-frames-float-keymap*
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "f") "float-this")
+    (define-key m (kbd "F") "unfloat-this")
+    (define-key m (kbd "u") "unfloat-this")
+    (define-key m (kbd "C-f") "flatten-floats")
+    m))
+
+(defvar *my-frames-management-keymap*
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "h") "move-focus left")
+    (define-key m (kbd "j") "move-focus down")
+    (define-key m (kbd "k") "move-focus up")
+    (define-key m (kbd "l") "move-focus right")
+    (define-key m (kbd "H") "move-window left")
+    (define-key m (kbd "J") "move-window down")
+    (define-key m (kbd "K") "move-window up")
+    (define-key m (kbd "L") "move-window right")
+    (define-key m (kbd "C-h") "exchange-direction left")
+    (define-key m (kbd "C-j") "exchange-direction down")
+    (define-key m (kbd "C-k") "exchange-direction up")
+    (define-key m (kbd "C-l") "exchange-direction right")
+    (define-key m (kbd "/") "hsplit-and-focus")
+    (define-key m (kbd "-") "vsplit-and-focus")
+    (define-key m (kbd "S") "hsplit")
+    (define-key m (kbd "s") "vsplit")
+    (define-key m (kbd "H") "hsplit-equally")
+    (define-key m (kbd "V") "vsplit-equally")
+    (define-key m (kbd ".") "iresize")
+    (define-key m (kbd "+") "balance-frames")
+    (define-key m (kbd "d") "remove-split")
+    (define-key m (kbd "D") "only")
+    (define-key m (kbd "e") "expose")
+    (define-key m (kbd "f") "fullscreen")
+    (define-key m (kbd "F") '*my-frames-float-keymap*)
+    (define-key m (kbd "i") "info")
+    (define-key m (kbd "I") "show-window-properties")
+    (define-key m (kbd "m") "meta")
+    (define-key m (kbd "C-s") "sibling")
+    (define-key m (kbd "u") "next-urgent")
+    (define-key m (kbd "U") "unmaximize")
+    m))
+
+(define-key *root-map* (kbd "w") '*my-frames-management-keymap*)
+
+(defvar *my-buffers-management-keymap*
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "b") "windowlist")
+    (define-key m (kbd "d") "delete-window")
+    (define-key m (kbd "D") "delete-window-and-frame")
+    (define-key m (kbd "x") "kill-window")
+    (define-key m (kbd "n") "next")
+    (define-key m (kbd "o") "other-window")
+    (define-key m (kbd "p") "prev")
+    m))
+
+(define-key *root-map* (kbd "b") '*my-buffers-management-keymap*)
+
+(define-key *top-map* (kbd "s-h") "move-focus left")
+(define-key *top-map* (kbd "s-j") "move-focus down")
+(define-key *top-map* (kbd "s-k") "move-focus up")
+(define-key *top-map* (kbd "s-l") "move-focus right")
+(define-key *top-map* (kbd "s-H") "move-window left")
+(define-key *top-map* (kbd "s-J") "move-window down")
+(define-key *top-map* (kbd "s-K") "move-window up")
+(define-key *top-map* (kbd "s-L") "move-window right")
+
+(define-key *top-map* (kbd "s-1") "gselect 1")
+(define-key *top-map* (kbd "s-2") "gselect 2")
+(define-key *top-map* (kbd "s-3") "gselect 3")
+(define-key *top-map* (kbd "s-4") "gselect 4")
+
+;;  (define-key *top-map* (kbd "s-!") "gmove 1")
+;;  (define-key *top-map* (kbd "s-@") "gmove 2")
+;;  (define-key *top-map* (kbd "s-#") "gmove 3")
+
+(define-key *top-map* (kbd "s-!") "gmove-and-follow 1")
+(define-key *top-map* (kbd "s-$") "gmove-and-follow 4")
+(define-key *top-map* (kbd "s-@") "gmove-and-follow 2")
+(define-key *top-map* (kbd "s-#") "gmove-and-follow 3")
+
+;;emacs shit
+
+(update-color-map (current-screen))
+;(run-shell-command "shepherd") add back if emacs breaks 
+(run-shell-command "emacs --daemon")
+
+;(run-shell-command "exec oneko -fg white -bg black -tofocus -idle 245000")
+
+    (defvar *es-win* nil
+      "to hold the windo called emacsclient")
+    (defun save-es-called-win ()
+      (setf *es-win* (current-window)))
+
+    (defun return-es-called-win (win)
+      (let* ((group (window-group win))
+             (frame (window-frame win))
+            (old-frame (tile-group-current-frame group)))
+        (frame-raise-window group frame win)
+        (focus-all win)
+        (unless (eq frame old-frame)
+          (show-frame-indicator group))))
+
+
+
+
+
+(ql:quickload :slynk)
+
+
+(stumpwm:defcommand sly-start-server () ()
+  "Start a slynk server for sly."
+  (slynk:create-server :dont-close t))
+
+(stumpwm:defcommand sly-stop-server () ()
+  "Stop current slynk server for sly."
+  (slynk:stop-server 4005))
+  
+
