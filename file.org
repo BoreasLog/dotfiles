@@ -1,0 +1,57 @@
+#-TITLE
+
+
+* First Heading
+  Here *is* content !
+  something somthing *ORANHGES*
+** Sub-Heading
+	i like to indent things
+    
+** a thing 
+	oranges are pretty good
+    | list       | list | list            |
+    | green      | red  | one hundred and |
+    | sdsijfisdf |      |                 |
+
+'$1+$2'
+
+'(concat $1 $2)
+
+  
+
+* TODO List
+[[https://orgmode.org][Here is the Org Mode homePage]]
+
+
+* Second
+	#+begin_src emacs-lisp
+      
+      (defun my-elisp-func ()
+        (message "hello!"))
+
+	#+end_src
+- [X]
+
+    
+- [ ] Fist
+- [ ] secondyy
+ 
+- [X] emacs 
+- [ ] secondyy
+- [ ] secondyy
+- [ ] secondyy
+- [ ] secondyy
+- [ ] secondyy
+- [ ] secondyy
+- [ ] secondyy
+  
+- Second
+- third
+  
+(setq org-todo-keywords
+      '((sequence "TODO(t)" "WAIT(w@/!)" "|" "DONE(d!)" "CANCELED(c@)")))
+      
+
+      
+
+
