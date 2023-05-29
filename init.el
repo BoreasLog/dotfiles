@@ -2,9 +2,11 @@
 (scroll-bar-mode -1)
 (tool-bar-mode -1)
 (tooltip-mode -1)
-(set-fringe-mode 10)
 
+(set-fringe-mode 10)
+(set-face-attribute 'default nil :height 110)
 (global-unset-key (kbd "C-z"))
+
 (windmove-default-keybindings)
 
 (add-to-list 'auto-mode-alist '("\\.org\\'" . org-mode))
@@ -37,6 +39,7 @@
 (use-package try
   :ensure t)
 
+
 (use-package swiper
   :ensure t)
 (use-package doom-themes
@@ -49,6 +52,10 @@
 
 (use-package diminish
   :ensure t)
+
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode 1))
 
 (use-package ivy
   :diminish
@@ -95,7 +102,8 @@
 
 (use-package undo-tree
   :init
-  (global-undo-tree-mode 1))
+  (global-undo-tree-mode 1)
+  (setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/undo"))))
 
 (use-package evil
   :init
@@ -123,144 +131,93 @@
 
 
 
-(require 'evil) 
-(use-package org)
+(require 'evil)
 
+(use-package org
+  :config 
+  (setq org-agenda-start-with-log-mode t)
+  (setq org-log-done 'time)
+  (setq org-log-into-drawer t)
 
-(use-package org-superstar  ;; Improved version of org-bullets
+  (setq org-agenda-files
+	'(
+	  "~/.emacs.d/OrgFiles/Classes.org"
+	  "~/.emacs.d/OrgFiles/Tasks.org")))
+
+(use-package olivetti
   :ensure t
   :config
-  (add-hook 'org-mode-hook (lambda () (org-superstar-mode 1))))
+  (add-hook 'org-mode-hook (lambda() (olivetti-mode 1))))
+
+ (use-package org-superstar  ;; Improved version of org-bullets
+   :ensure t
+   :config
+   (add-hook 'org-mode-hook (lambda () (org-superstar-mode 1))))
   
-(setq org-startup-indented t)           ;; Indent according to section
-(setq org-startup-with-inline-images t) ;; Display images in-buffer by default
+ (setq org-startup-indented t)           ;; Indent according to section
+ (setq org-startup-with-inline-images t) ;; Display images in-buffer by default
 
 
-(use-package evil-org
-  :ensure t
-  :after (evil org)
-  :config
-  (add-hook 'org-mode-hook 'evil-org-mode)
-  (add-hook 'evil-org-mode-hook
-            (lambda ()
-              (evil-org-set-key-theme '(navigation insert textobjects additional calendar))))
-  (require 'evil-org-agenda)
-  (evil-org-agenda-set-keys))
+ (use-package evil-org
+   :ensure t
+   :after (evil org)
+   :config
+   (add-hook 'org-mode-hook 'evil-org-mode)
+   (add-hook 'evil-org-mode-hook
+             (lambda ()
+               (evil-org-set-key-theme '(navigation insert textobjects additional calendar))))
+   (require 'evil-org-agenda)
+   (evil-org-agenda-set-keys))
 
-;; AucTeX settings - almost no changes
-(use-package latex
-  :ensure auctex
-  :hook ((LaTeX-mode . prettify-symbols-mode))
-  :bind (:map LaTeX-mode-map
-         ("C-S-e" . latex-math-from-calc))
-  :config
-  ;; Format math as a Latex string with Calc
-  (defun latex-math-from-calc ()
-    "Evaluate `calc' on the contents of line at point."
-    (interactive)
-    (cond ((region-active-p)
-           (let* ((beg (region-beginning))
-                  (end (region-end))
-                  (string (buffer-substring-no-properties beg end)))
-             (kill-region beg end)
-             (insert (calc-eval `(,string calc-language latex
-                                          calc-prefer-frac t
-                                          calc-angle-mode rad)))))
-          (t (let ((l (thing-at-point 'line)))
-               (end-of-line 1) (kill-line 0) 
-               (insert (calc-eval `(,l
-                                    calc-language latex
-                                    calc-prefer-frac t
-                                    calc-angle-mode rad))))))))
-(latex-preview-pane-enable)
-
-;; CDLatex settings
-(use-package cdlatex
-  :ensure t
-  :hook (LaTeX-mode . turn-on-cdlatex)
-  :bind (:map cdlatex-mode-map 
-              ("<tab>" . cdlatex-tab)))
-
-;; Yasnippet settings
-(use-package yasnippet
-  :ensure t
-  :hook ((LaTeX-mode . yas-minor-mode)
-         (post-self-insert . my/yas-try-expanding-auto-snippets))
-  :config
-  (use-package warnings
-    :config
-    (cl-pushnew '(yasnippet backquote-change)
-                warning-suppress-types
-                :test 'equal))
-
-  (setq yas-triggers-in-field t)
-  
-  ;; Function that tries to autoexpand YaSnippets
-  ;; The double quoting is NOT a typo!
-  (defun my/yas-try-expanding-auto-snippets ()
-    (when (and (boundp 'yas-minor-mode) yas-minor-mode)
-      (let ((yas-buffer-local-condition ''(require-snippet-condition . auto)))
-        (yas-expand)))))
-
-;; CDLatex integration with YaSnippet: Allow cdlatex tab to work inside Yas
-;; fields
-(use-package cdlatex
-  :hook ((cdlatex-tab . yas-expand)
-         (cdlatex-tab . cdlatex-in-yas-field))
-  :config
-  (use-package yasnippet
-    :bind (:map yas-keymap
-           ("<tab>" . yas-next-field-or-cdlatex)
-           ("TAB" . yas-next-field-or-cdlatex))
-    :config
-    (defun cdlatex-in-yas-field ()
-      ;; Check if we're at the end of the Yas field
-      (when-let* ((_ (overlayp yas--active-field-overlay))
-                  (end (overlay-end yas--active-field-overlay)))
-        (if (>= (point) end)
-            ;; Call yas-next-field if cdlatex can't expand here
-            (let ((s (thing-at-point 'sexp)))
-              (unless (and s (assoc (substring-no-properties s)
-                                    cdlatex-command-alist-comb))
-                (yas-next-field-or-maybe-expand)
-                t))
-          ;; otherwise expand and jump to the correct location
-          (let (cdlatex-tab-hook minp)
-            (setq minp
-                  (min (save-excursion (cdlatex-tab)
-                                       (point))
-                       (overlay-end yas--active-field-overlay)))
-            (goto-char minp) t))))
-
-    (defun yas-next-field-or-cdlatex nil
-      (interactive)
-      "Jump to the next Yas field correctly with cdlatex active."
-      (if
-          (or (bound-and-true-p cdlatex-mode)
-              (bound-and-true-p org-cdlatex-mode))
-          (cdlatex-tab)
-        (yas-next-field-or-maybe-expand)))))
-
-(add-hook 'after-init-hook 'server-start)
-(setq server-raise-frame t)
-
-(if window-system
-          (add-hook 'server-done-hook
-                   (lambda () (shell-command "stumpish 'eval (stumpwm::return-es-called-win stumpwm::*es-win*)'"))))
-
-
+(customize-set-variable 'ispell-program-name "aspell")
+(customize-set-variable 'ispell-extra-args '("--sug-mode=ultra"))
+(add-hook 'text-mode-hook 'flyspell-mode)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(ansi-color-names-vector
+   ["#5a5475" "#CC6666" "#C2FFDF" "#FFEA00" "#55b3cc" "#FFB8D1" "#96CBFE" "#F8F8F0"])
  '(custom-safe-themes
-   '("1f1b545575c81b967879a5dddc878783e6ebcca764e4916a270f9474215289e5" default))
+   '("b3f43687b0453c29f5da6448270aabee8f686c30cc0951c5e24b8d9be6b426e0" "5bea0ffe17e0c863a88c20e412c3238955c4659314a76dcf5e3af8049b0cfb53" "1f1b545575c81b967879a5dddc878783e6ebcca764e4916a270f9474215289e5" default))
+ '(exwm-floating-border-color "#282633")
+ '(fci-rule-color "#B8A2CE")
+ '(highlight-tail-colors ((("#64657f") . 0) (("#605f82") . 20)))
+ '(jdee-db-active-breakpoint-face-colors (cons "#464258" "#C5A3FF"))
+ '(jdee-db-requested-breakpoint-face-colors (cons "#464258" "#C2FFDF"))
+ '(jdee-db-spec-breakpoint-face-colors (cons "#464258" "#656565"))
+ '(objed-cursor-color "#CC6666")
  '(org-agenda-files
-   '("/home/jack/.emacs.d/org/todo.org" "/home/jack/.emacs.d/org/whatever.org"))
+   '("/home/jack/.emacs.d/OrgFiles/Classes.org" "/home/jack/.emacs.d/OrgFiles/Tasks.org" "/home/jack/journal/life.org"))
  '(package-selected-packages
-   '(advice-patch pdf-tools pdflatex latex-preview-pane org-table yasnippet cdlatex preview auctex evil-org org-superstar helpful evil-collection ivy-rich evil diminish rainbow-delimiters doom-themes swiper ivy try use-package sly)))
+   '(olivetti org-krita krita-org org-roam doom-modeline advice-patch pdf-tools pdflatex latex-preview-pane org-table yasnippet cdlatex preview auctex evil-org org-superstar helpful evil-collection ivy-rich evil diminish rainbow-delimiters doom-themes swiper ivy try use-package sly))
+ '(pdf-view-midnight-colors (cons "#F8F8F0" "#5a5475"))
+ '(rustic-ansi-faces
+   ["#5a5475" "#CC6666" "#C2FFDF" "#FFEA00" "#55b3cc" "#FFB8D1" "#96CBFE" "#F8F8F0"])
+ '(vc-annotate-background "#5a5475")
+ '(vc-annotate-color-map
+   (list
+    (cons 20 "#C2FFDF")
+    (cons 40 "#d6f894")
+    (cons 60 "#eaf14a")
+    (cons 80 "#FFEA00")
+    (cons 100 "#f6dc00")
+    (cons 120 "#eece00")
+    (cons 140 "#E6C000")
+    (cons 160 "#eebd45")
+    (cons 180 "#f6ba8b")
+    (cons 200 "#FFB8D1")
+    (cons 220 "#ee9cad")
+    (cons 240 "#dd8189")
+    (cons 260 "#CC6666")
+    (cons 280 "#b26565")
+    (cons 300 "#986565")
+    (cons 320 "#7e6565")
+    (cons 340 "#B8A2CE")
+    (cons 360 "#B8A2CE")))
+ '(vc-annotate-very-old-color nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -277,7 +234,3 @@
   (add-hook mode(lambda () (display-line-numbers-mode 0))))
 
   (require 'diminish)
-
-
-
-(setq org-agenda-files '("~/.emacs.d/org"))
